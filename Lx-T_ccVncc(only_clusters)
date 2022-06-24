@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Nov 15 13:42:11 2021
+
+@author: schubham
+"""
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import general_functions
+import seaborn as sns
+
+cluster_total = pd.read_csv('/home/schubham/Thesis/Thesis/Data/master_file_new.txt', sep = '\\s+')
+cluster_total = cluster_total.rename(columns = {'#Cluster': 'Cluster'})
+cluster_total = general_functions.cleanup(cluster_total)
+clusters = general_functions.removing_galaxy_groups(cluster_total)
+
+thesis_table = pd.read_csv('/home/schubham/Thesis/Thesis/Data/thesis_table.csv')
+thesis_table = thesis_table.rename({'cluster_name':'Cluster'},axis=1)
+thesis_table = general_functions.cleanup(thesis_table)
+cluster_total = pd.merge(clusters, thesis_table, right_on='Cluster',left_on = 'Cluster', how ='inner')
+
+
+g = cluster_total.groupby('label')
+CC_clusters = g.get_group('CC')
+NCC_clusters = g.get_group('NCC')
+
+Z = (CC_clusters['z'])
+E = np.empty(len(CC_clusters['z']))
+#USING DENSITY PARAMETERS ACCORDING TO LCDM
+omega_m = 0.3
+omega_lambda = 0.7
+CC_clusters.iloc[0]
+Lx = CC_clusters['Lx(1e44)']
+E = (omega_m*(1+Z)**3 + omega_lambda)**0.5
+Lx_new_c = CC_clusters['Lx(1e44)']/E
+T_c = CC_clusters['T(keV)']
+T_new_c = T_c/4.5
+
+log_Lx_c = np.log10(Lx_new_c)
+log_T_c = np.log10(T_c)
+log_T_new_c = np.log10(T_new_c)
+sigma_Lx_c = 0.4343*CC_clusters['eL(%)']/100
+sigma_T_c = 0.4343*((CC_clusters['Tmax']-CC_clusters['Tmin'])/(2*T_c))
+err_Lx_c = CC_clusters['eL(%)']*Lx_new_c/100
+err_T_c = [T_c-(CC_clusters['Tmin']), (CC_clusters['Tmax']-T_c)]
+ycept_c, Norm_c, Slope_c, Scatter_c = general_functions.calculate_bestfit(log_T_new_c,sigma_T_c,log_Lx_c,sigma_Lx_c)
+
+# Bootstrap for CC #
+# =============================================================================
+# best_A = []
+# best_B = []
+# best_scatter = []
+# for j in range(0,10000):
+#     random_clusters = CC_clusters.sample(n = len(CC_clusters), replace = True)
+#     
+#     Z = (random_clusters['z'])
+#     Lx = random_clusters['Lx(1e44)']
+#     E = (omega_m*(1+Z)**3 + omega_lambda)**0.5
+#     Lx_new = Lx/E
+#     T = random_clusters['T(keV)']
+#     T_new = T/4.5
+# 
+#     log_Lx_c = np.log10(Lx_new)
+#     log_T_c = np.log10(T)
+#     log_T_new_c = np.log10(T_new)
+#     sigma_Lx_c = 0.4343*random_clusters['eL(%)']/100
+#     sigma_T_c = 0.4343*((random_clusters['Tmax']-random_clusters['Tmin'])/(2*T))
+#     yintercept,norm,slope,scatter = general_functions.calculate_bestfit(log_T_new_c,sigma_T_c,log_Lx_c,sigma_Lx_c)
+#     
+#     best_A.append(norm)
+#     best_B.append(slope)
+#     best_scatter.append(scatter)
+# 
+# bestfit_bootstrap_dict = {'Normalization': best_A, 'Slope': best_B, 'Scatter': best_scatter}              
+# bestfit_bootstrap = pd.DataFrame(bestfit_bootstrap_dict) 
+# bestfit_bootstrap.to_csv('Lx-T_CC_(only_clusters).csv')  
+# =============================================================================
+
+
+
+# NCC clusters
+Z = (NCC_clusters['z'])
+Lx = NCC_clusters['Lx(1e44)']
+E = (omega_m*(1+Z)**3 + omega_lambda)**0.5
+Lx_new_n = NCC_clusters['Lx(1e44)']/E
+T_n = NCC_clusters['T(keV)']
+T_new_n = T_n/4.5
+
+log_Lx_n = np.log10(Lx_new_n)
+log_T_n = np.log10(T_n)
+log_T_new_n = np.log10(T_new_n)
+sigma_Lx_n = 0.4343*NCC_clusters['eL(%)']/100
+sigma_T_n = 0.4343*((NCC_clusters['Tmax']-NCC_clusters['Tmin'])/(2*T_n))
+err_Lx_n = NCC_clusters['eL(%)']*Lx_new_n/100
+err_T_n = [T_n-(NCC_clusters['Tmin']), (NCC_clusters['Tmax']-T_n)]
+ycept_n, Norm_n, Slope_n, Scatter_n = general_functions.calculate_bestfit(log_T_new_n, sigma_T_n, log_Lx_n, sigma_Lx_n)
+
+
+# =============================================================================
+# best_A = []
+# best_B = []
+# best_scatter = []
+# for j in range(0,10000):
+#     random_clusters = NCC_clusters.sample(n = len(NCC_clusters), replace = True)
+#     Z = (random_clusters['z'])
+#     Lx = random_clusters['Lx(1e44)']
+#     E = (omega_m*(1+Z)**3 + omega_lambda)**0.5
+#     Lx_new = random_clusters['Lx(1e44)']/E
+#     T = random_clusters['T(keV)']
+#     T_new = T/4.5
+# 
+#     log_Lx_n = np.log10(Lx_new)
+#     log_T_n = np.log10(T)
+#     log_T_new_n = np.log10(T_new)
+#     sigma_Lx_n = 0.4343*random_clusters['eL(%)']/100
+#     sigma_T_n = 0.4343*((random_clusters['Tmax']-random_clusters['Tmin'])/(2*T))
+#     ycept,norm,slope,scatter = general_functions.calculate_bestfit(log_T_new_n,sigma_T_n,log_Lx_n,sigma_Lx_n)
+#     
+#     best_A.append(norm)
+#     best_B.append(slope)
+#     best_scatter.append(scatter)
+# 
+# bestfit_bootstrap_dict = {'Normalization': best_A, 'Slope': best_B, 'Scatter': best_scatter}              
+# bestfit_bootstrap = pd.DataFrame(bestfit_bootstrap_dict) 
+# bestfit_bootstrap.to_csv('Lx-T_NCC_(only_clusters).csv')  
+# =============================================================================
+
+# Reading bootstrap data
+data_c = pd.read_csv('/home/schubham/Thesis/Thesis/Scaling_relations/bces_data/Lx-T_CC_(only_clusters).csv')
+norm_c = data_c['Normalization']
+slope_c = data_c['Slope']
+scatter_c = data_c['Scatter']
+
+errnorm_c = general_functions.calculate_asymm_err(norm_c)
+errslope_c = general_functions.calculate_asymm_err(slope_c)
+errscatter_c = general_functions.calculate_asymm_err(scatter_c)
+
+
+data_n = pd.read_csv('/home/schubham/Thesis/Thesis/Scaling_relations/bces_data/Lx-T_NCC_(only_clusters).csv')
+norm_n = data_n['Normalization']
+slope_n = data_n['Slope']
+scatter_n = data_n['Scatter']
+
+errnorm_n = general_functions.calculate_asymm_err(norm_n)
+errslope_n = general_functions.calculate_asymm_err(slope_n)
+errscatter_n = general_functions.calculate_asymm_err(scatter_n)
+
+
+sns.set_context('notebook')
+plt.errorbar(T_c, Lx_new_c, xerr= err_T_c, color='green', yerr=err_Lx_c, ls='', fmt='.', capsize=1, alpha=1, elinewidth=0.6, label=f'CC clusters ({len(T_c)})')
+plt.errorbar(T_n, Lx_new_n, xerr=err_T_n, color='red', yerr=err_Lx_n, ls='', fmt='.', capsize=2, alpha=1, elinewidth=0.6, label=f'NCC clusters ({len(T_n)})')
+
+z_c = Norm_c * T_new_c**Slope_c
+z_n = Norm_n * T_new_n**Slope_n
+
+plt.plot(T_c, z_c, color='blue', label='CC bestfit')
+plt.plot(T_n, z_n, color='black', label='NCC bestfit')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(0.9,25)
+plt.ylim(0.01, 40)
+plt.xlabel('T [keV]')
+plt.ylabel('$L_{X}$/E(z) *$10^{44}$ [erg/s]')
+plt.title('$L_{X}-T$ (Only clusters) best fit')
+plt.legend(loc = 'best')
+# plt.savefig('R-T_best_fit-NCC.png',dpi=300)
+plt.show()
+
+print('The best fit parameters for CC are :')
+print(f'Normalization : {np.round(Norm_c,3)} +/- {np.round(errnorm_c,3)}')
+print(f'Slope : {np.round(Slope_c,3)} +/- {np.round(errslope_c,3)}')
+print(f'Scatter: {np.round(Scatter_c,3)} +/- {np.round(errscatter_c,3)}')
+
+print('The best fit parameters for NCC are :')
+print(f'Normalization : {np.round(Norm_n,3)} +/- {np.round(errnorm_n,3)}')
+print(f'Slope : {np.round(Slope_n,3)} +/- {np.round(errslope_n,3)}')
+print(f'Scatter: {np.round(Scatter_n,3)} +/- {np.round(errscatter_n,3)}')
+
+
+print(f'Normalization sigma : {general_functions.calculate_sigma_dev(Norm_c,errnorm_c,Norm_n,errnorm_n)}')
+print(f'Slope sigma : {general_functions.calculate_sigma_dev(Slope_c,errslope_c,Slope_n,errslope_n)}')
+print(f'Scatter sigma : {general_functions.calculate_sigma_dev(Scatter_c,errscatter_c,Scatter_n,errscatter_n)}')
+
+
+
+print(general_functions.percent_diff(Norm_c,errnorm_c,Norm_n,errnorm_n))
+print(general_functions.percent_diff(Slope_c,errslope_c,Slope_n,errslope_n))
+print(general_functions.percent_diff(Scatter_c,errscatter_c,Scatter_n,errscatter_n))
+
+
+
+# plotting conf ellipses
+cc_all = pd.read_csv('/home/schubham/Thesis/Thesis/Scaling_relations/bces_data/Lx-T_CC_BCES.csv')
+norm_all_c = cc_all['Normalization']
+slope_all_c = cc_all['Slope']
+scatter_all_c = cc_all['Scatter']
+Norm_all_c = 2.008
+Slope_all_c = 2.208
+
+ncc_all = pd.read_csv('/home/schubham/Thesis/Thesis/Scaling_relations/bces_data/Lx-T_NCC_BCES.csv')
+norm_all_n = ncc_all['Normalization']
+slope_all_n = ncc_all['Slope']
+scatter_all_n = ncc_all['Scatter']
+Norm_all_n = 1.129
+Slope_all_n = 2.167
+
+sns.set_context('notebook')
+fig, ax_n = plt.subplots(figsize =(8,6) )
+#Ellipses for clusters only
+general_functions.confidence_ellipse(slope_c, norm_c, Slope_c, Norm_c, n_std = 1,ax=ax_n, label=r'for CC (clusters)', edgecolor='green', lw = 2)
+general_functions.confidence_ellipse(slope_c, norm_c, Slope_c, Norm_c, n_std = 3,ax=ax_n, edgecolor='green', lw = 2)
+general_functions.confidence_ellipse(slope_n, norm_n, Slope_n, Norm_n, n_std = 1,ax=ax_n, label=r'for NCC (clusters)', edgecolor='orange', lw = 2)
+general_functions.confidence_ellipse(slope_n, norm_n, Slope_n, Norm_n, n_std = 3,ax=ax_n,  edgecolor='orange', lw = 2)
+
+#Ellipses for clusters+groups
+general_functions.confidence_ellipse(slope_all_c, norm_all_c, Slope_all_c, Norm_all_c, n_std = 1,ax=ax_n, label='for CC (clusters+groups)', edgecolor='blue', lw = 2)
+general_functions.confidence_ellipse(slope_all_c, norm_all_c, Slope_all_c, Norm_all_c, n_std = 2,ax=ax_n, edgecolor='blue', lw = 2)
+general_functions.confidence_ellipse(slope_all_n, norm_all_n, Slope_all_n, Norm_all_n, n_std = 1,ax=ax_n, label=r'$1\sigma$ for NCC (clusters+groups)', edgecolor='red', lw = 2)
+general_functions.confidence_ellipse(slope_all_n, norm_all_n, Slope_all_n, Norm_all_n, n_std = 2,ax=ax_n, edgecolor='red', lw = 2)
+
+
+
+
+plt.scatter(Slope_c,Norm_c,color = 'green',label = 'Bestfit CC (clusters)')#{np.round(Slope_c,3),np.round(Norm_c,3)}')
+plt.scatter(Slope_n,Norm_n,color = 'orange',label = 'Bestfit NCC (clusters)')#' {np.round(Slope_n,3),np.round(Norm_n,3)}')
+plt.scatter(Slope_all_c,Norm_all_c,color = 'blue',label = 'Bestfit CC (clusters+groups)')#{np.round(Slope_all_c,3),np.round(Norm_all_c,3)}')
+plt.scatter(Slope_all_n,Norm_all_n,color = 'red',label = 'Best fit NCC (clusters+groupd)')#{np.round(Slope_all_n,3),np.round(Norm_all_n,3)}')
+
+plt.xlabel('Slope')
+plt.ylabel('Normalization')
+plt.xlim(1.3,3.5)
+plt.ylim(0.5,3)
+plt.title('Parameter contour plot for CC-NCC')
+plt.legend(prop={'size':10})
+plt.show()
+
+
+CC_clusters[CC_clusters['T(keV)'] < 2]
+CC_clusters.loc[114]
